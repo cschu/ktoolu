@@ -8,7 +8,13 @@ def getFastqIdentifier(string):
     return string[1:-2] if isPreCassava18(string) else string.split()[0][1:]
 def getFastaIdentifier(string):
     string = string.split()[0][1:]
-    return string[:-2] if isPreCassava18(string) else string
+    return string[:-2] if isPreCassava18(string) else string    
+def verifyFileFormat(fn, fileFormat):
+    firstChar = open(fn).read(1)
+    verifiedFastq = firstChar == '@' and fileFormat == 'fq'
+    verifiedFasta = firstChar == '>' and fileFormat == 'fa'
+    return verifiedFastq or verifiedFasta
+
 
 def readFasta(fn):
     """
