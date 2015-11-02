@@ -9,7 +9,7 @@ from Bio import Entrez
 
 #from kt_user import __email__ as whoami
 whoami = None
-assert whoami, 'Please set your whoami=<your email address> to not anger NCBI'
+assert whoami, 'Please set whoami=<your email address> in order to not anger NCBI...'
 Entrez.email = whoami
 
 def fetchTaxonomyData(ids):

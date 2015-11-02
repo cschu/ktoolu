@@ -1,2 +1,2 @@
 #!/usr/bin/env python
-__email__ = ''
+__email__ = 'christian.schudoma@tsl.ac.uk'

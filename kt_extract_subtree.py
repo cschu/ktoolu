@@ -77,9 +77,9 @@ def extractSequences(keepSequences, inputR1, outputR1, inputR2=None, outputR2=No
         revOut, revGen = open(outputR2, 'wb'), getSeqs(inputR2)
 
     fxid1, fxid2 = None, None
-    while True:
+    while 1:
         try:
-            rwdRecord = fwdGen.next()
+            fwdRecord = fwdGen.next()
         except:
             break
         fxid1 = getID(fwdRecord[0])
@@ -133,7 +133,7 @@ def main(argv):
     assert (not 'in2' in args) or (os.path.exists(args.in2) and verifyFileFormat(args.in2, args.input_format) and 'out2' in args)
 
     input1, output1 = args.in1, args.out1
-    if 'out2' in args and 'in2' in args:
+    if args.out2 is not None and args.in2 is not None:
         input2, output2 = args.in2, args.out2
     else:
         input2, output2 = None, None
@@ -154,7 +154,7 @@ def main(argv):
 
     keepTaxIDs = compileValidTaxIDs(db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
     keepSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
-    extractSequences(keepSequences, input1, output1, inputR2=input1, outputR2=output2, fmt='fq')
+    extractSequences(keepSequences, input1, output1, inputR2=input2, outputR2=output2, fmt='fq')
     pass
 
 if __name__ == '__main__': main(sys.argv[1:])
