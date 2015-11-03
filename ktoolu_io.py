@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import os
 import sys
 import bz2
 import gzip
@@ -6,20 +7,50 @@ import unittest
 
 
 def isGZ(fn):
+    """
+    Tests whether a file is gz-compressed.
+
+    :param fn: a filename
+    :type fn: str
+
+    :returns: True if fn is gz-compressed otherwise False
+    """
+    assert os.path.exists(fn)
     with open(fn, 'rb') as fi:
         b1, b2 = fi.read(1), fi.read(1)
         return b1 == '\x1f' and b2 == '\x8b'
+
 def isBZ2(fn):
+    """
+    Tests whether a file is bz2-compressed.
+
+    :param fn: a filename
+    :type fn: str
+
+    :returns: True if fn is bz2-compressed otherwise False
+    """
+    assert os.path.exists(fn)
     with open(fn, 'rb') as fi:
         return fi.read(10) == 'BZh91AY&SY'
 
-def openFile(fn):
-    if isGZ(fn):
-        return gzip.open
-    elif isBZ2(fn):
-        return bz2.BZ2File
+def openFile(fn, fmt=None, mode='rb'):
+    """
+    Opens an uncompressed, gz-compressed or bz2-compressed file.
+
+    :param fn: a filename
+    :type fn: str
+
+    :returns: a handle to fn
+    """
+    assert os.path.exists(fn) or mode in ('w', 'wb', 'a', 'ab')
+    assert fmt in (None, 'gz', 'bz2')
+    if fmt == 'gz' or (fmt is None and isGZ(fn)):
+        return gzip.open(fn, mode)
+    elif fmt == 'bz2' or (fmt is None and isBZ2(fn)):
+        return bz2.BZ2File(fn, mode)
     else:
-        return open
+        return open(fn, mode)
+
 
 def isPreCassava18(string):
     return string.endswith('/1') or string.endswith('/2')
@@ -99,7 +130,8 @@ def readFastq(fn):
 
 
 
-
+"""
+# Experimental code
 class ktFastxIterator(object):
     def __init__(self, **kwargs):
         fmt = kwargs.get('fmt', 'fq')
@@ -130,63 +162,8 @@ class ktFastxIterator(object):
         #        break
 
     pass
-
-
 """
 
-    fwdOut = open(outputR1, 'wb')
-    fwdGen = getSeqs(inputR1) # anabl_getSeqsFromFastX(inputR1, X=fastx)
-
-    revOut, revGen = None, None
-    revSid, revSeq = None, None
-    if outputR2 is not None and inputR2 is not None:
-        revOut = open(outputR2, 'wb')
-        revGen = getSeqs(inputR2) # anabl_getSeqsFromFastX(inputR2, X=fastx)
-
-
-    fxid1, fxid2 = None, None
-    while True:
-        try:
-            fwdSid, fwdSeq = fwdGen.next()
-        except:
-            break
-        logfile.write('*%s*\n' % fwdSid)
-        fxid1 = getID(fwdSid)
-        if revGen is not None:
-            try:
-                revSid, revSeq = revGen.next()
-            except:
-                break
-            fxid2 = getID(revSid)
-
-        if fxid1 != fxid2 and fxid2 is not None:
-            sys.stderr.write('Error: fxid-mismatch %s %s.\n' % (fxid1, fxid2))
-            sys.exit(1)
-        if fxid1 in keepSequences:
-            fwdOut.write(('%s\n' * fastx) % ((fwdSid,) + fwdSeq))
-            if revOut is not None:
-                revOut.write(('%s\n' * fastx) % ((revSid,) + revSeq))
-        else:
-            # sys.stdout.write('%s is not in keepSequences\n' % fqid1)
-            pass
-    fwdOut.close()
-    if revOut is not None:
-        revOut.close()
-    pass
-
-
-
-
-
-
-
-
-
-
-
-
-
-"""
 
 
 
@@ -196,11 +173,21 @@ class ktFastxIterator(object):
 Unit tests
 """
 
+GZ_TESTFILE = 'testdata/ktoolu_test.R1.fq.gz'
+BZ2_TESTFILE = 'testdata/ktoolu_test.R1.fq.bz2'
+
 FASTQ_TESTFILE_R1 = 'testdata/ktoolu_test.R1.fq'
 FASTQ_TESTRECORDS = [22, 27, 32]
 FASTA_TESTFILE = 'testdata/ktoolu_test.fa'
 FASTA_TESTRECORDS = [22, 27, 32]
-
+class compressedFileTest(unittest.TestCase):
+    def test(self):
+        self.assertTrue(isGZ(GZ_TESTFILE))
+        self.assertFalse(isBZ2(GZ_TESTFILE))
+        self.assertTrue(isBZ2(BZ2_TESTFILE))
+        self.assertFalse(isGZ(BZ2_TESTFILE))
+        self.assertFalse(isGZ(FASTA_TESTFILE))
+        self.assertFalse(isGZ(FASTQ_TESTFILE_R1))
 class readFastqTest(unittest.TestCase):
     def test(self):
         data = list(readFastq(FASTQ_TESTFILE_R1))
