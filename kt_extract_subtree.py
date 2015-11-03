@@ -62,19 +62,18 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
     return keepSequences
 
 
-def extractSequences(keepSequences, inputR1, outputR1, inputR2=None, outputR2=None, fmt='fq'):
-    assert fmt in ('fq', 'fa')
-    if fmt == 'fq':
+def extractSequences(keepSequences, fileInfo):
+    assert fileInfo.input_format in ('fq', 'fa')
+    if fileInfo.input_format == 'fq':
         getID, getSeqs, nlines = KTIO.getFastqIdentifier, KTIO.readFastq, 4
     else:
         getID, getSeqs, nlines = KTIO.getFastaIdentifier, KTIO.readFasta, 2
 
-    fwdOut, fwdGen = open(outputR1, 'wb'), getSeqs(inputR1)
+    fwdOut, fwdGen = open(fileInfo.outR1, 'wb'), getSeqs(fileInfo.inR1)
     revOut, revGen = None, None
-    revSid, revSeq = None, None
 
-    if outputR2 is not None and inputR2 is not None:
-        revOut, revGen = open(outputR2, 'wb'), getSeqs(inputR2)
+    if args.outR2 is not None and args.inR2 is not None:
+        revOut, revGen = open(args.outR2, 'wb'), getSeqs(args.inR2)
 
     fxid1, fxid2 = None, None
     while 1:
@@ -111,8 +110,8 @@ def main(argv):
     descr = ''
     parser = argparse.ArgumentParser(description=descr)
     parser.add_argument('--db', help='Path to the root directory of a kraken database')
-    parser.add_argument('--in1', help='The r1-file (single-end reads or forward paired-end reads).')
-    parser.add_argument('--in2', help='The r2-file (reverse paired-end reads)')
+    parser.add_argument('--inR1', help='The r1-file (single-end reads or forward paired-end reads).')
+    parser.add_argument('--inR2', help='The r2-file (reverse paired-end reads)')
     parser.add_argument('--keep-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will be kept unless they are specified in --drop-taxids.')
     parser.add_argument('--drop-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will be dropped.')
     parser.add_argument('--vip-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will always be kept.'))
@@ -121,22 +120,16 @@ def main(argv):
     parser.add_argument('--input-format', help='Input sequences stored in Fasta (fa) or Fastq (fq) file(s).', default='fq')
     parser.add_argument('--include-unclassified', action='store_true', help='Extract unclassified sequences.')
 
-    parser.add_argument('--out1', type=str, help='The r1-output file.')
-    parser.add_argument('--out2', type=str, help='The r2-output file.')
+    parser.add_argument('--outR1', type=str, help='The r1-output file.')
+    parser.add_argument('--outR2', type=str, help='The r2-output file.')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--logfile', type=str, help='A logfile.', default='kt_extract.log')
     args = parser.parse_args()
 
     assert 'db' in args and os.path.exists(args.db)
     assert 'kraken_results' in args and os.path.exists(args.kraken_results)
-    assert 'in1' in args and os.path.exists(args.in1) and verifyFileFormat(args.in1, args.input_format) and 'out1' in args
-    assert (not 'in2' in args) or (os.path.exists(args.in2) and verifyFileFormat(args.in2, args.input_format) and 'out2' in args)
-
-    input1, output1 = args.in1, args.out1
-    if args.out2 is not None and args.in2 is not None:
-        input2, output2 = args.in2, args.out2
-    else:
-        input2, output2 = None, None
+    assert args.inR1 and os.path.exists(args.inR1) and verifyFileFormat(args.inR1, args.input_format) and args.outR1
+    assert (not args.inR2) or (os.path.exists(args.inR2) and verifyFileFormat(args.inR2, args.input_format) and args.outR2)
 
     try:
         wantedTaxIDs = map(int, args.keep_taxids.split(','))
@@ -154,7 +147,7 @@ def main(argv):
 
     keepTaxIDs = compileValidTaxIDs(db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
     keepSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
-    extractSequences(keepSequences, input1, output1, inputR2=input2, outputR2=output2, fmt='fq')
+    extractSequences(keepSequences, args)
     pass
 
 if __name__ == '__main__': main(sys.argv[1:])

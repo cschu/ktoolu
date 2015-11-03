@@ -1,6 +1,25 @@
 #!/usr/bin/env python
 import sys
+import bz2
+import gzip
 import unittest
+
+
+def isGZ(fn):
+    with open(fn, 'rb') as fi:
+        b1, b2 = fi.read(1), fi.read(1)
+        return b1 == '\x1f' and b2 == '\x8b'
+def isBZ2(fn):
+    with open(fn, 'rb') as fi:
+        return fi.read(10) == 'BZh91AY&SY'
+
+def openFile(fn):
+    if isGZ(fn):
+        return gzip.open
+    elif isBZ2(fn):
+        return bz2.BZ2File
+    else:
+        return open
 
 def isPreCassava18(string):
     return string.endswith('/1') or string.endswith('/2')
@@ -8,12 +27,13 @@ def getFastqIdentifier(string):
     return string[1:-2] if isPreCassava18(string) else string.split()[0][1:]
 def getFastaIdentifier(string):
     string = string.split()[0][1:]
-    return string[:-2] if isPreCassava18(string) else string    
+    return string[:-2] if isPreCassava18(string) else string
 def verifyFileFormat(fn, fileFormat):
-    firstChar = open(fn).read(1)
+    firstChar = openFile(fn).read(1)
     verifiedFastq = firstChar == '@' and fileFormat == 'fq'
     verifiedFasta = firstChar == '>' and fileFormat == 'fa'
     return verifiedFastq or verifiedFasta
+
 
 
 def readFasta(fn):
@@ -25,7 +45,7 @@ def readFasta(fn):
     Output: a generator object providing identifier and sequence information
     for each record in the Fastq file
     """
-    with open(fn) as fi:
+    with openFile(fn) as fi:
         seq, identifier = [], ''
         for line in fi:
             line = line.strip()
@@ -55,7 +75,7 @@ def readFastq(fn):
     Output: a generator object providing identifier, sequence, and quality information
     for each record in the Fastq file
     """
-    with open(fn) as fi:
+    with openFile(fn) as fi:
         block, identifier = [], ''
         for line in fi:
             line = line.strip()
