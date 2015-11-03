@@ -39,9 +39,14 @@ def openFile(fn, fmt=None, mode='rb'):
 
     :param fn: a filename
     :type fn: str
+    :param fmt: a file compression format
+    :type fmt: str {None, 'gz', or 'bz2'}
+    :param mode: a file mode (append, read, write)
+    :type mode: str {'a', 'ab', 'r', 'rb', 'w', 'wb'}
 
     :returns: a handle to fn
     """
+    assert mode in ('a', 'ab', 'r', 'rb', 'w', 'wb')
     assert os.path.exists(fn) or mode in ('w', 'wb', 'a', 'ab')
     assert fmt in (None, 'gz', 'bz2')
     if fmt == 'gz' or (fmt is None and isGZ(fn)):
