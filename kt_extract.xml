@@ -1,0 +1,111 @@
+<tool id="kt_extract" name="ktoolu extract reads" version="0.1.0">
+    <description>Extract reads that were assigned a chosen taxonomy id or belong to a taxonomic subtree.</description>
+    <requirements>
+        <requirement type="package" version="2.7">python</requirement>
+    </requirements>
+    <stdio>
+        <exit_code range="1:" />
+    </stdio>
+
+    <command><![CDATA[
+        python kt_extract.py
+         --db "${database.fields.path}"
+         --inR1 "${inputData.inputR1}"
+         --outR1 "${outputR1}"
+
+        #if $inputData.inputFormat == "pairedFastq" or $inputData.inputFormat == "pairedFasta":
+          --inR2 "${inputData.inputR2}"
+          --outR2 "${outputR2}"
+        #end if
+
+        #if $inputData.inputFormat == "singleFastq" or $inputData.inputFormat == "pairedFastq":
+          --input-format "fq"
+        #else:
+          --input-format "fa"
+        #end if
+
+        --kraken-results "${kraken_results}"
+
+        #if $includeUnclassifiedReads == "includeUnclassifiedYes":
+          --include-unclassified
+        #end if
+
+        #if $keepTaxIDs != "":
+          --keep-taxids "${keepTaxIDs}"
+        #end if
+
+        #if $dropTaxIDs != "":
+          --drop-taxids "${dropTaxIDs}"
+        #end if
+
+        #if $vipTaxIDs != "":
+          --vip-taxids "${vipTaxIDs}"
+        #end if
+    ]]></command>
+    <inputs>
+      <param name="database" type="select" label="Select a kraken database">
+        <options from_data_table="krakenDBs">
+          <filter type="sort_by" column="2" />
+          <validator type="no_options" message="No databases are available" />
+        </options>
+      </param>
+      <param name="kraken_results" type="data" format="tabular" label="Kraken classification output" />
+      <conditional name="inputData">
+        <param name="inputFormat" type="select" label="Please select input file type and library type.">
+          <option value="singleFastq">Single-end Fastq</option>
+				  <option value="pairedFastq">Paired-end Fastq</option>
+          <option value="singleFasta">Single-end Fasta</option>
+          <option value="pairedFasta">Paired-end Fasta</option>
+        </param>
+        <when value="singleFastq">
+          <param name="inputR1" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Forward/single end (R1) Fastq file" />
+        </when>
+        <when value="pairedFastq">
+          <param name="inputR1" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Forward/single end (R1) Fastq file" />
+          <param name="inputR2" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Reverse (R2) Fastq file" />
+        </when>
+        <when value="singleFasta">
+          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fastq file" />
+        </when>
+        <when value="pairedFasta">
+          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fastq file" />
+          <param name="inputR2" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Reverse (R2) Fastq file" />
+        </when>
+      </conditional>
+      <param name="keepTaxIDs" type="text" value="" default="" label="Extract all reads that were classified to belong to a subtree rooted at these taxonomy IDs.">
+        <sanitizer invalid_char="">
+          <valid initial="string.digits">
+            <add value="," />
+          </valid>
+        </sanitizer>
+      </param>
+      <param name="dropTaxIDs" type="text" value="" default="" label="Ignore all reads that were classified to belong to a subtree rooted at these taxonomy IDs.">
+        <sanitizer invalid_char="">
+          <valid initial="string.digits">
+            <add value="," />
+          </valid>
+        </sanitizer>
+      </param>
+      <param name="vipTaxIDs" type="text" value="" default="" label="Extract all reads that were classified as one of these taxonomy IDs (overrides ignored subtrees).">
+        <sanitizer invalid_char="">
+          <valid initial="string.digits">
+            <add value="," />
+          </valid>
+        </sanitizer>
+      </param>
+
+      <param name="includeUnclassifiedReads" type="select" label="Include unclassified reads?">
+        <option value="includeUnclassifiedNo">No</option>
+        <option value="includeUnclassifiedYes">Yes</option>
+      </param>
+    </inputs>
+    <outputs>
+      <data format="input1" name="outputR1" label="${tool.name} filtered R1-reads of ${on_string}" />
+      <data format="input2" name="outputR2" label="${tool.name} filtered rev-reads of ${on_string}">
+        <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
+      </data>
+    </outputs>
+    <help><![CDATA[
+        TODO: Fill in help.
+    ]]></help>
+</tool>

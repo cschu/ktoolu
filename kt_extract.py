@@ -29,7 +29,7 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
     nseqs = 0
     keepSequences = set()
 
-    with open(f_inputClassification) as fi:
+    with KTIO.openFile(f_inputClassification) as fi:
         for line in fi:
             nseqs += 1
             line = line.strip().split()
@@ -69,11 +69,18 @@ def extractSequences(keepSequences, fileInfo):
     else:
         getID, getSeqs, nlines = KTIO.getFastaIdentifier, KTIO.readFasta, 2
 
-    fwdOut, fwdGen = open(fileInfo.outR1, 'wb'), getSeqs(fileInfo.inR1)
+    if fileInfo.gz_output:
+        ffmt = 'gz'
+    elif fileInfo.bz2_output:
+        ffmt = 'bz2'
+    else:
+        ffmt = None
+
+    fwdOut, fwdGen = KTIO.openFile(fileInfo.outR1, mode='wb', fmt=ffmt), getSeqs(fileInfo.inR1)
     revOut, revGen = None, None
 
     if args.outR2 is not None and args.inR2 is not None:
-        revOut, revGen = open(args.outR2, 'wb'), getSeqs(args.inR2)
+        revOut, revGen = KTIO.openFile(args.outR2, mode='wb', fmt=ffmt), getSeqs(args.inR2)
 
     fxid1, fxid2 = None, None
     while 1:
@@ -124,12 +131,19 @@ def main(argv):
     parser.add_argument('--outR2', type=str, help='The r2-output file.')
     parser.add_argument('--debug', action='store_true')
     parser.add_argument('--logfile', type=str, help='A logfile.', default='kt_extract.log')
+
+    parser.add_argument('--gz-output', action='store_true')
+    parser.add_argument('--bz2-output', action='store_true')
     args = parser.parse_args()
 
     assert 'db' in args and os.path.exists(args.db)
     assert 'kraken_results' in args and os.path.exists(args.kraken_results)
     assert args.inR1 and os.path.exists(args.inR1) and verifyFileFormat(args.inR1, args.input_format) and args.outR1
     assert (not args.inR2) or (os.path.exists(args.inR2) and verifyFileFormat(args.inR2, args.input_format) and args.outR2)
+
+    def xor(a,b):
+        return (a and not b) or (not a and b)
+    assert xor(args.gz_output, args.bz2_output) or not(args.gz_output or args.bz2_output)
 
     try:
         wantedTaxIDs = map(int, args.keep_taxids.split(','))

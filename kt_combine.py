@@ -5,7 +5,7 @@ import argparse
 import ktoolu_io as KTIO
 
 def readClassification(fn):
-    with open(fn) as fi:
+    with KTIO.openFile(fn) as fi:
         return set(line.strip().split()[:2] for line in fi if line.strip().startswith('C'))
 
 def computeSets(resultsA, resultsB):
@@ -23,13 +23,20 @@ def assignSequences(sets, fileInfo):
     else:
         getID, getSeqs, nlines = KTIO.getFastaIdentifier, KTIO.readFasta, 2
 
+    if fileInfo.gz_output:
+        ffmt = 'gz'
+    elif fileInfo.bz2_output:
+        ffmt = 'bz2'
+    else:
+        ffmt = None
+
     R1gen, R2gen = getSeqs(fileInfo.inR1), None
-    R1A, R1B, R1AB, R1U = map(lambda x:open(x, 'wb'), [fileInfo.outAR1, fileInfo.outBR1, fileInfo.outABR1, fileInfo.outUR1])
+    R1A, R1B, R1AB, R1U = map(lambda x:KTIO.openFile(x, fmt=ffmt, mode='wb'), [fileInfo.outAR1, fileInfo.outBR1, fileInfo.outABR1, fileInfo.outUR1])
     R2A, R2B, R2AB, R2U = None, None, None, None
 
     if inR2 is not None:
         R2gen = getSeqs(fileInfo.inR2)
-        R2A, R2B, R2AB, R2U = map(lambda x:open(x, 'wb'), [fileInfo.outAR2, fileInfo.outBR2, fileInfo.outABR2, fileInfo.outUR2])
+        R2A, R2B, R2AB, R2U = map(lambda x:KTIO.openFile(x, fmt=ffmt, mode='wb'), [fileInfo.outAR2, fileInfo.outBR2, fileInfo.outABR2, fileInfo.outUR2])
 
     fxid1, fxid2 = None, None
     while 1:
@@ -85,6 +92,8 @@ def main():
     parser.add_argument('--outABR2', type=str, help='')
     parser.add_argument('--outUnclassifiedR1', type=str, help='')
     parser.add_argument('--outUnclassifiedR2', type=str, help='')
+    parser.add_argument('--gz-output', action='store_true')
+    parser.add_argument('--bz2-output', action='store_true')
     args = parser.parse_args()
 
     assert 'kraken_resultsA' in args and os.path.exists(args.kraken_resultsA)
@@ -93,17 +102,12 @@ def main():
     assert (not args.inR2) or (os.path.exists(args.inR2) and verifyFileFormat(args.inR2, args.input_format))
     assert args.outAR1 is not None and args.outBR1 is not None and args.outABR1 is not None and args.outUR1 is not None
     assert (not args.inR2) or (args.outAR2 is not None and args.outBR2 is not None and args.outABR2 is not None and args.outUR2 is not None)
+    def xor(a,b):
+        return (a and not b) or (not a and b)
+    assert xor(args.gz_output, args.bz2_output) or not(args.gz_output or args.bz2_output)
 
     sets = computeSets(args.kraken_resultsA, args.kraken_resultsB)
     assignSequences(sets, args)
-
-
-
-
-
-
-
-
     pass
 
 if __name__ == '__main__': main()
