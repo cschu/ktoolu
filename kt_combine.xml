@@ -1,0 +1,86 @@
+<tool id="kt_combine" name="ktoolu combine" version="0.1.0">
+    <description>Combine results from two different kraken runs.</description>
+    <requirements>
+        <requirement type="package" version="2.7">python</requirement>
+    </requirements>
+    <stdio>
+        <exit_code range="1:" />
+    </stdio>
+
+    <command interpreter="python"><![CDATA[
+        kt_combine.py
+         --kraken-resultsA "${krakenA}"
+         --kraken-resultsB "${krakenB}"
+         --inR1 "${inputData.inputR1}"
+         --outAR1 "${outputAR1}"
+         --outBR1 "${outputBR1}"
+         --outABR1 "${outputABR1}"
+         --outUR1 "${outputUR1}"
+
+         #if $inputData.inputFormat == "pairedFastq" or $inputData.inputFormat == "pairedFasta":
+          --inR2 "${inputData.inputR2}"
+          --outAR2 "${outputAR2}"
+          --outBR2 "${outputBR2}"
+          --outABR2 "${outputABR2}"
+          --outUR2 "${outputUR2}"
+        #end if
+
+        #if $inputData.inputFormat == "singleFastq" or $inputData.inputFormat == "pairedFastq":
+          --input-format "fq"
+        #else:
+          --input-format "fa"
+        #end if        
+    ]]></command>
+    <inputs>
+      <param name="krakenA" type="data" format="tabular" label="Kraken classification output set A" />
+		  <param name="krakenB" type="data" format="tabular" label="Kraken classification output set B" />
+
+      <conditional name="inputData">
+        <param name="inputFormat" type="select" label="Please select input file type and library type.">
+          <option value="singleFastq">Single-end Fastq</option>
+				  <option value="pairedFastq">Paired-end Fastq</option>
+          <option value="singleFasta">Single-end Fasta</option>
+          <option value="pairedFasta">Paired-end Fasta</option>
+        </param>
+        <when value="singleFastq">
+          <param name="inputR1" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Forward/single end (R1) Fastq file" />
+        </when>
+        <when value="pairedFastq">
+          <param name="inputR1" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Forward/single end (R1) Fastq file" />
+          <param name="inputR2" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Reverse (R2) Fastq file" />
+        </when>
+        <when value="singleFasta">
+          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fasta file" />
+        </when>
+        <when value="pairedFasta">
+          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fasta file" />
+          <param name="inputR2" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Reverse (R2) Fasta file" />
+        </when>
+      </conditional>
+    </inputs>
+    <outputs>
+      <data format="tabular" name="logfile" label="${tool.name} logfile" />
+      <data format="inputR1" name="outputAR1" label="${tool.name} (class A) filtered R1-reads of ${on_string}" />
+      <data format="inputR2" name="outputAR2" label="${tool.name} (class A) filtered R2-reads of ${on_string}">
+        <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
+      </data>
+    </outputs>
+    <data format="inputR1" name="outputBR1" label="${tool.name} (class B) filtered R1-reads of ${on_string}" />
+    <data format="inputR2" name="outputBR2" label="${tool.name} (class B) filtered R2-reads of ${on_string}">
+      <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
+    </data>
+    <data format="inputR1" name="outputABR1" label="${tool.name} (class AB) filtered R1-reads of ${on_string}" />
+    <data format="inputR2" name="outputABR2" label="${tool.name} (class AB) filtered R2-reads of ${on_string}">
+      <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
+    </data>
+    <data format="inputR1" name="outputUR1" label="${tool.name} (unclassified) filtered R1-reads of ${on_string}" />
+    <data format="inputR2" name="outputUR2" label="${tool.name} (unclassified) filtered R2-reads of ${on_string}">
+      <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
+    </data>
+  </outputs>
+  </outputs>
+  </outputs>
+    <help><![CDATA[
+        TODO: Fill in help.
+    ]]></help>
+</tool>
