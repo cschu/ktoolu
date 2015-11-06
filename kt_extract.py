@@ -143,8 +143,8 @@ def main(argv):
     # for k in sorted(args):
     #    print '%s\t%s' % (k, args[k])
     # return None
-    print args
-    return None
+    # print args
+    # return None
 
     assert 'db' in args and os.path.exists(args.db)
     assert 'kraken_results' in args and os.path.exists(args.kraken_results)
