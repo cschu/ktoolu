@@ -34,6 +34,7 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
             nseqs += 1
             line = line.strip().split()
 
+            """
             if taxID > 0:
                 # extract reads from branch
                 # don't allow unclassified reads
@@ -52,6 +53,9 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
                 takeUnclassified = allowUnclassified and line[0] == 'U'
                 # don't allow classified reads
                 takeClassified = False
+            """
+            takeClassified = line[0] == 'C' and int(line[2]) in keepTaxIDs
+            takeUnclassified = allowUnclassified and line[0] == 'U'
 
             if takeUnclassified or takeClassified:
                 keepSequences.add(line[1].strip())
@@ -99,9 +103,9 @@ def extractSequences(keepSequences, fileInfo):
         assert fxid1 == fxid2 or fxid2 is None
 
         if fxid1 in keepSequences:
-            fwdOut.write(('%s\n' * nlines) % fwdRecord
+            fwdOut.write(('%s\n' * nlines) % fwdRecord)
             if revOut is not None:
-                revOut.write(('%s\n' * nlines) % revRecord
+                revOut.write(('%s\n' * nlines) % revRecord)
         else:
             pass
     fwdOut.close()
@@ -121,7 +125,7 @@ def main(argv):
     parser.add_argument('--inR2', help='The r2-file (reverse paired-end reads)')
     parser.add_argument('--keep-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will be kept unless they are specified in --drop-taxids.')
     parser.add_argument('--drop-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will be dropped.')
-    parser.add_argument('--vip-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will always be kept.'))
+    parser.add_argument('--vip-taxids', type=str, default='', help='A comma-separated list of taxonomy ids. These ids and all descending ids will always be kept.')
 
     parser.add_argument('--kraken-results', type=str, help='A file containing kraken classification results for the input sequences.')
     parser.add_argument('--input-format', help='Input sequences stored in Fasta (fa) or Fastq (fq) file(s).', default='fq')
@@ -136,30 +140,36 @@ def main(argv):
     parser.add_argument('--bz2-output', action='store_true')
     args = parser.parse_args()
 
+    # for k in sorted(args):
+    #    print '%s\t%s' % (k, args[k])
+    # return None
+    print args
+    return None
+
     assert 'db' in args and os.path.exists(args.db)
     assert 'kraken_results' in args and os.path.exists(args.kraken_results)
-    assert args.inR1 and os.path.exists(args.inR1) and verifyFileFormat(args.inR1, args.input_format) and args.outR1
-    assert (not args.inR2) or (os.path.exists(args.inR2) and verifyFileFormat(args.inR2, args.input_format) and args.outR2)
+    assert args.inR1 and os.path.exists(args.inR1) and KTIO.verifyFileFormat(args.inR1, args.input_format) and args.outR1
+    assert (not args.inR2) or (os.path.exists(args.inR2) and KTIO.verifyFileFormat(args.inR2, args.input_format) and args.outR2)
 
     def xor(a,b):
         return (a and not b) or (not a and b)
     assert xor(args.gz_output, args.bz2_output) or not(args.gz_output or args.bz2_output)
 
     try:
-        wantedTaxIDs = map(int, args.keep_taxids.split(','))
+        wantedTaxIDs = map(int, args.keep_taxids.replace(' ', '').split(','))
     except:
         # by default just take the whole tree
         wantedTaxIDs = [1]
     try:
-        unwantedTaxIDs = map(int, args.drop_taxids.split(','))
+        unwantedTaxIDs = map(int, args.drop_taxids.replace(' ', '').split(','))
     except:
         unwantedTaxIDs = []
     try:
-        vipTaxIDs = map(int, args.vip_taxids.split(','))
+        vipTaxIDs = map(int, args.vip_taxids.replace(' ', '').split(','))
     except:
         vipTaxIDs = []
 
-    keepTaxIDs = compileValidTaxIDs(db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
+    keepTaxIDs = compileValidTaxIDs(args.db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
     keepSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
     extractSequences(keepSequences, args)
     pass

@@ -7,9 +7,9 @@
         <exit_code range="1:" />
     </stdio>
 
-    <command><![CDATA[
-        python kt_extract.py
-         --db "${database.fields.path}"
+    <command interpreter="python"><![CDATA[
+        kt_extract.py
+         --db "${databaseChoice.fields.path}"
          --inR1 "${inputData.inputR1}"
          --outR1 "${outputR1}"
 
@@ -41,9 +41,10 @@
         #if $vipTaxIDs != "":
           --vip-taxids "${vipTaxIDs}"
         #end if
+        > ${logfile}
     ]]></command>
     <inputs>
-      <param name="database" type="select" label="Select a kraken database">
+      <param name="databaseChoice" type="select" label="Select a kraken database">
         <options from_data_table="krakenDBs">
           <filter type="sort_by" column="2" />
           <validator type="no_options" message="No databases are available" />
@@ -65,29 +66,29 @@
           <param name="inputR2" type="data" format="fastq,fq,fastqsanger,fastqsolexa,fastqillumina,fastq.gz,fq.gz,fastq.bz2,fq.bz2" label="Reverse (R2) Fastq file" />
         </when>
         <when value="singleFasta">
-          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fastq file" />
+          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fasta file" />
         </when>
         <when value="pairedFasta">
-          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fastq file" />
-          <param name="inputR2" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Reverse (R2) Fastq file" />
+          <param name="inputR1" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Forward/single end (R1) Fasta file" />
+          <param name="inputR2" type="data" format="fasta,fa,fas,fasta.gz,fa.gz,fas.gz,fasta.bz2,fa.bz2,fas.bz2" label="Reverse (R2) Fasta file" />
         </when>
       </conditional>
       <param name="keepTaxIDs" type="text" value="" default="" label="Extract all reads that were classified to belong to a subtree rooted at these taxonomy IDs.">
-        <sanitizer invalid_char="">
+        <sanitizer invalid_char=",">
           <valid initial="string.digits">
             <add value="," />
           </valid>
         </sanitizer>
       </param>
       <param name="dropTaxIDs" type="text" value="" default="" label="Ignore all reads that were classified to belong to a subtree rooted at these taxonomy IDs.">
-        <sanitizer invalid_char="">
+        <sanitizer invalid_char=",">
           <valid initial="string.digits">
             <add value="," />
           </valid>
         </sanitizer>
       </param>
       <param name="vipTaxIDs" type="text" value="" default="" label="Extract all reads that were classified as one of these taxonomy IDs (overrides ignored subtrees).">
-        <sanitizer invalid_char="">
+        <sanitizer invalid_char=",">
           <valid initial="string.digits">
             <add value="," />
           </valid>
@@ -100,6 +101,7 @@
       </param>
     </inputs>
     <outputs>
+      <data format="tabular" name="logfile" label="${tool.name} logfile" />
       <data format="input1" name="outputR1" label="${tool.name} filtered R1-reads of ${on_string}" />
       <data format="input2" name="outputR2" label="${tool.name} filtered rev-reads of ${on_string}">
         <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
