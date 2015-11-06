@@ -7,8 +7,8 @@
         <exit_code range="1:" />
     </stdio>
 
-    <command><![CDATA[
-        python kt_extract.py
+    <command interpreter="python"><![CDATA[
+        kt_extract.py
          --db "${databaseChoice.fields.path}"
          --inR1 "${inputData.inputR1}"
          --outR1 "${outputR1}"
@@ -41,10 +41,11 @@
         #if $vipTaxIDs != "":
           --vip-taxids "${vipTaxIDs}"
         #end if
+        > ${logfile}
     ]]></command>
     <inputs>
       <param name="databaseChoice" type="select" label="Select a kraken database">
-        <options from_data_table="krakenDBs"/>
+        <options from_data_table="krakenDBs">
           <filter type="sort_by" column="2" />
           <validator type="no_options" message="No databases are available" />
         </options>
@@ -73,21 +74,21 @@
         </when>
       </conditional>
       <param name="keepTaxIDs" type="text" value="" default="" label="Extract all reads that were classified to belong to a subtree rooted at these taxonomy IDs.">
-        <sanitizer invalid_char="">
+        <sanitizer invalid_char=",">
           <valid initial="string.digits">
             <add value="," />
           </valid>
         </sanitizer>
       </param>
       <param name="dropTaxIDs" type="text" value="" default="" label="Ignore all reads that were classified to belong to a subtree rooted at these taxonomy IDs.">
-        <sanitizer invalid_char="">
+        <sanitizer invalid_char=",">
           <valid initial="string.digits">
             <add value="," />
           </valid>
         </sanitizer>
       </param>
       <param name="vipTaxIDs" type="text" value="" default="" label="Extract all reads that were classified as one of these taxonomy IDs (overrides ignored subtrees).">
-        <sanitizer invalid_char="">
+        <sanitizer invalid_char=",">
           <valid initial="string.digits">
             <add value="," />
           </valid>
@@ -100,6 +101,7 @@
       </param>
     </inputs>
     <outputs>
+      <data format="tabular" name="logfile" label="${tool.name} logfile" />
       <data format="input1" name="outputR1" label="${tool.name} filtered R1-reads of ${on_string}" />
       <data format="input2" name="outputR2" label="${tool.name} filtered rev-reads of ${on_string}">
         <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
