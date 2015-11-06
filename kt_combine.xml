@@ -29,7 +29,8 @@
           --input-format "fq"
         #else:
           --input-format "fa"
-        #end if        
+        #end if
+        > "${combineSummary}"        
     ]]></command>
     <inputs>
       <param name="krakenA" type="data" format="tabular" label="Kraken classification output set A" />
@@ -59,7 +60,7 @@
       </conditional>
     </inputs>
     <outputs>
-      <data format="tabular" name="logfile" label="${tool.name} logfile" />
+      <data format="tabular" name="combineSummary" label="${tool.name} kt combine summary" />
       <data format="inputR1" name="outputAR1" label="${tool.name} (class A) filtered R1-reads of ${on_string}" />
       <data format="inputR2" name="outputAR2" label="${tool.name} (class A) filtered R2-reads of ${on_string}">
         <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>

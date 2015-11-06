@@ -57,13 +57,15 @@ def assignSequences(sets, fileInfo):
 
         # set order is A, B, AB
         if fxid1 in sets[0]:
-            dest = R1A, R2A
+            dest, destid = R1A, R2A, 'A'
         elif fxid1 in sets[1]:
-            dest = R1B, R2B
+            dest, destid = R1B, R2B, 'B'
         elif fxid1 in sets[2]:
-            dest = R1AB, R2AB
+            dest, destid = R1AB, R2AB, '+'
         else:
-            dest = R1U, R2U
+            dest, destid = R1U, R2U, 'U'
+
+        sys.stdout.write('\t'.join([destid, fxid1]) + '\n')
 
         dest[0].write(('%s\n' * nlines) % R1rec
         if dest[1] is not None:

@@ -1,0 +1,52 @@
+<tool id="kt_summarize" name="ktoolu summarize" version="0.1.0">
+    <description>Summarize and visualize kraken classification results</description>
+    <requirements>
+        <requirement type="package" version="2.7">python</requirement>
+        <requirement type="package">krona</requirement>
+    </requirements>
+    <stdio>
+        <exit_code range="1:" />
+    </stdio>
+
+    <command interpreter="python"><![CDATA[
+        kt_summarize.py
+        #if $includeUnclassifiedReads == "includeUnclassifiedYes":
+          --include-unclassified
+        #end if
+        #if $drawKronaPlot == "drawKronaPlotYes":
+          --draw-krona-plot "${kronaPlot}"
+        #end if
+        #if $writeSummary == "writeSummaryYes":
+          --write-summary "${summaryTable}"
+        #end if
+         "${kraken_results}"
+    ]]></command>
+    <inputs>
+      <param name="kraken_results" type="data" format="tabular" label="Kraken classification output" />
+      <param name="drawKronaPlot" type="select" label="Draw Krona plot?">
+        <option value="drawKronaPlotYes">Yes</option>
+        <option value="drawKronaPlotNo">No</option>
+      </param>
+      <param name="writeSummary" type="select" label="Write summary table?">
+        <option value="writeSummaryYes">Yes</option>
+        <option value="writeSummaryNo">No</option>
+      </param>
+      <param name="includeUnclassifiedReads" type="select" label="Include unclassified reads?">
+        <option value="includeUnclassifiedNo">No</option>
+        <option value="includeUnclassifiedYes">Yes</option>
+      </param>
+    </inputs>
+    <outputs>
+      <data format="html" name="kronaPlot" label="Krona visualization of ${tool.name}">
+        <filter>drawKronaPlot == "drawKronaPlotYes"</filter>
+      </data>
+      <data format="tabular" name="summaryTable" label="${tool.name} summary table">
+        <filter>writeSummary == "writeSummaryYes"</filter>
+      </data>
+
+
+    </outputs>
+    <help><![CDATA[
+        TODO: Fill in help.
+    ]]></help>
+</tool>
