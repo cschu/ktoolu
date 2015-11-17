@@ -19,9 +19,9 @@ def computeSets(resultsA, resultsB):
 def assignSequences(sets, fileInfo):
     assert fileInfo.input_format in ('fq', 'fa')
     if fileInfo.input_format == 'fq':
-        getID, getSeqs, nlines = KTIO.getFastqIdentifier, KTIO.readFastq, 4
+        getID, getSeqs, nlines, outfmt = KTIO.getFastqIdentifier, KTIO.readFastq, 4, '%s\n%s\n+\n%s\n'
     else:
-        getID, getSeqs, nlines = KTIO.getFastaIdentifier, KTIO.readFasta, 2
+        getID, getSeqs, nlines, outfmt = KTIO.getFastaIdentifier, KTIO.readFasta, 2, '%s\n%s\n'
 
     if fileInfo.gz_output:
         ffmt = 'gz'
@@ -67,13 +67,13 @@ def assignSequences(sets, fileInfo):
 
         sys.stdout.write('\t'.join([destid, fxid1]) + '\n')
 
-        dest[0].write(('%s\n' * nlines) % R1rec
+        dest[0].write(outfmt % R1rec)
         if dest[1] is not None:
-            dest[1].write(('%s\n' * nlines) % R2rec
+            dest[1].write(outfmt % R2rec)
 
     map(lambda x:x.close(), [R1A, R1B, R1AB, R1U])
     if R2A is not None:
-        map(lambda x:x.close(), [R2A, R2B, R2AB, R2U)
+        map(lambda x:x.close(), [R2A, R2B, R2AB, R2U])
 
     pass
 
