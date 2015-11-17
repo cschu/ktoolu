@@ -34,7 +34,7 @@ def assignSequences(sets, fileInfo):
     R1A, R1B, R1AB, R1U = map(lambda x:KTIO.openFile(x, fmt=ffmt, mode='wb'), [fileInfo.outAR1, fileInfo.outBR1, fileInfo.outABR1, fileInfo.outUR1])
     R2A, R2B, R2AB, R2U = None, None, None, None
 
-    if inR2 is not None:
+    if fileInfo.inR2 is not None:
         R2gen = getSeqs(fileInfo.inR2)
         R2A, R2B, R2AB, R2U = map(lambda x:KTIO.openFile(x, fmt=ffmt, mode='wb'), [fileInfo.outAR2, fileInfo.outBR2, fileInfo.outABR2, fileInfo.outUR2])
 
@@ -57,13 +57,13 @@ def assignSequences(sets, fileInfo):
 
         # set order is A, B, AB
         if fxid1 in sets[0]:
-            dest, destid = R1A, R2A, 'A'
+            dest, destid = (R1A, R2A), 'A'
         elif fxid1 in sets[1]:
-            dest, destid = R1B, R2B, 'B'
+            dest, destid = (R1B, R2B), 'B'
         elif fxid1 in sets[2]:
-            dest, destid = R1AB, R2AB, '+'
+            dest, destid = (R1AB, R2AB), '+'
         else:
-            dest, destid = R1U, R2U, 'U'
+            dest, destid = (R1U, R2U), 'U'
 
         sys.stdout.write('\t'.join([destid, fxid1]) + '\n')
 
@@ -98,12 +98,12 @@ def main():
     parser.add_argument('--bz2-output', action='store_true')
     args = parser.parse_args()
 
-    assert 'kraken_resultsA' in args and os.path.exists(args.kraken_resultsA)
-    assert 'kraken_resultsB' in args and os.path.exists(args.kraken_resultsB)
-    assert args.inR1 and os.path.exists(args.inR1) and verifyFileFormat(args.inR1, args.input_format)
-    assert (not args.inR2) or (os.path.exists(args.inR2) and verifyFileFormat(args.inR2, args.input_format))
+    assert args.kraken_resultsA is not None and os.path.exists(args.kraken_resultsA)
+    assert args.kraken_resultsB is not None and os.path.exists(args.kraken_resultsB)
+    assert args.inR1 is not None and os.path.exists(args.inR1) and verifyFileFormat(args.inR1, args.input_format)
+    assert (args.inR2 is None) or (os.path.exists(args.inR2) and verifyFileFormat(args.inR2, args.input_format))
     assert args.outAR1 is not None and args.outBR1 is not None and args.outABR1 is not None and args.outUR1 is not None
-    assert (not args.inR2) or (args.outAR2 is not None and args.outBR2 is not None and args.outABR2 is not None and args.outUR2 is not None)
+    assert (args.inR2 is None) or (args.outAR2 is not None and args.outBR2 is not None and args.outABR2 is not None and args.outUR2 is not None)
     def xor(a,b):
         return (a and not b) or (not a and b)
     assert xor(args.gz_output, args.bz2_output) or not(args.gz_output or args.bz2_output)
