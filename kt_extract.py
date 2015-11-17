@@ -171,7 +171,7 @@ def main(argv):
 
     keepTaxIDs = compileValidTaxIDs(args.db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
     keepSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
-    extractSequences(keepSequences, args)
+    KTIO.extractSequences(keepSequences, args)
     pass
 
 if __name__ == '__main__': main(sys.argv[1:])
