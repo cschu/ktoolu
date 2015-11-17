@@ -102,8 +102,8 @@
     </inputs>
     <outputs>
       <data format="tabular" name="logfile" label="${tool.name} logfile" />
-      <data format="input1" name="outputR1" label="${tool.name} filtered R1-reads of ${on_string}" />
-      <data format="input2" name="outputR2" label="${tool.name} filtered rev-reads of ${on_string}">
+      <data format="inputR1" name="outputR1" label="${tool.name} filtered R1-reads of ${on_string}" />
+      <data format="inputR2" name="outputR2" label="${tool.name} filtered R2-reads of ${on_string}">
         <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
       </data>
     </outputs>

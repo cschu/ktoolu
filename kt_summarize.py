@@ -39,9 +39,9 @@ def writeOutput(out, taxInfoDict, c):
 def main():
     parser = argparse.ArgumentParser(description='')
     parser.add_argument('--include-unclassified', action='store_true')
-    parser.add_argument('--draw-krona-plot', action='store_true')
-    parser.add_argument('--path-to-krona', default='')
-    parser.add_argument('--write-summary', action='store_true')
+    parser.add_argument('--draw-krona-plot', type=str, default='')
+    parser.add_argument('--path-to-krona', type=str, default='')
+    parser.add_argument('--write-summary', type=str, default='')
     parser.add_argument('kraken_results', type=str)
     args = parser.parse_args()
 
@@ -81,7 +81,7 @@ def main():
                 sys.stderr.write('krona installation not found in system path. Please install or use --path-to-krona option.\n')
                 sys.exit(1)
 
-        krona_cmd = '%s -o %s %s' % (kpath, args.kraken_results + '.krona.html', path_kr_in)
+        krona_cmd = '%s -o %s %s' % (kpath, args.draw_krona_plot, path_kr_in)
 
         try:
             p = subprocess.Popen(krona_cmd, shell=True, stderr=subprocess.PIPE, stdout=subprocess.PIPE)
@@ -91,7 +91,7 @@ def main():
             sys.exit(1)
 
     if args.write_summary:
-        with open(args.kraken_results + '.summary.txt', 'wb') as out:
+        with open(args.write_summary, 'wb') as out:
             writeOutput(out, taxInfoDict, taxCounter)
 
     pass
