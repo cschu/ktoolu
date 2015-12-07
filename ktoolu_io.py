@@ -46,12 +46,13 @@ def openFile(fn, fmt=None, mode='rb'):
 
     :returns: a handle to fn
     """
+    file_exists = os.path.exists(fn)
     assert mode in ('a', 'ab', 'r', 'rb', 'w', 'wb')
-    assert os.path.exists(fn) or mode in ('w', 'wb', 'a', 'ab')
+    assert file_exists or mode in ('w', 'wb', 'a', 'ab')
     assert fmt in (None, 'gz', 'bz2')
-    if fmt == 'gz' or (fmt is None and isGZ(fn)):
+    if fmt == 'gz' or (fmt is None and (file_exists and isGZ(fn))):
         return gzip.open(fn, mode)
-    elif fmt == 'bz2' or (fmt is None and isBZ2(fn)):
+    elif fmt == 'bz2' or (fmt is None and (file_exists and isBZ2(fn))):
         return bz2.BZ2File(fn, mode)
     else:
         return open(fn, mode)
@@ -138,6 +139,53 @@ def readFastq(fn):
                 # current line contains sequence information
                 block.append(line)
 
+
+def extractSequences(keepSequences, fileInfo):
+    assert fileInfo.input_format in ('fq', 'fa')
+    if fileInfo.input_format == 'fq':
+        getID, getSeqs, nlines, outfmt = getFastqIdentifier, readFastq, 4, '%s\n%s\n+\n%s\n'
+    else:
+        getID, getSeqs, nlines, outfmt = getFastaIdentifier, readFasta, 2, '%s\n%s\n'
+
+    if 'gz_output' in fileInfo and fileInfo.gz_output:
+        ffmt = 'gz'
+    elif 'bz2_output' in fileInfo and fileInfo.bz2_output:
+        ffmt = 'bz2'
+    else:
+        ffmt = None
+
+    fwdOut, fwdGen = openFile(fileInfo.outR1, mode='wb', fmt=ffmt), getSeqs(fileInfo.inR1)
+    revOut, revGen = None, None
+
+    if fileInfo.outR2 and fileInfo.inR2:
+        revOut, revGen = openFile(fileInfo.outR2, mode='wb', fmt=ffmt), getSeqs(fileInfo.inR2)
+
+    fxid1, fxid2 = None, None
+    while 1:
+        try:
+            fwdRecord = fwdGen.next()
+        except:
+            break
+        fxid1 = getID(fwdRecord[0])
+        if revGen is not None:
+            try:
+                revRecord = revGen.next()
+            except:
+                break
+            fxid2 = getID(revRecord[0])
+
+        assert fxid1 == fxid2 or fxid2 is None
+
+        if fxid1 in keepSequences:
+            fwdOut.write(outfmt % fwdRecord)
+            if revOut is not None:
+                revOut.write(outfmt % revRecord)
+        else:
+            pass
+    fwdOut.close()
+    if revOut is not None:
+        revOut.close()
+    pass
 
 
 
