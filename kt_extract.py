@@ -159,7 +159,10 @@ def main(argv):
         wantedTaxIDs = map(int, args.keep_taxids.replace(' ', '').split(','))
     except:
         # by default just take the whole tree
-        wantedTaxIDs = [1]
+        if args.includeUnclassified:
+            wantedTaxIDs = []
+        else:
+            wantedTaxIDs = [1]
     try:
         unwantedTaxIDs = map(int, args.drop_taxids.replace(' ', '').split(','))
     except:

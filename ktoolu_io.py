@@ -56,6 +56,12 @@ def openFile(fn, fmt=None, mode='rb'):
     else:
         return open(fn, mode)
 
+def nRecords(fn, fmt='fq'):
+    assert fmt in ('fa', 'fq')
+    assert os.path.exists(fn)
+    nlines = sum(1 for line in openFile)
+    return nlines / (4 if fmt == 'fq' else 2)
+
 
 def isPreCassava18(string):
     return string.endswith('/1') or string.endswith('/2')
