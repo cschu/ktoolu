@@ -174,7 +174,7 @@ def processFastq(fi):
             block.append(line)
 
 
-def extractSequences(keepSequences, fileInfo):
+def extractSequences(keepSequences, fileInfo, rejected=set()):
     assert fileInfo.input_format in ('fq', 'fa')
     if fileInfo.input_format == 'fq':
         getID, getSeqs, nlines, outfmt = getFastqIdentifier, readFastq, 4, '%s\n%s\n+\n%s\n'
@@ -187,7 +187,7 @@ def extractSequences(keepSequences, fileInfo):
         ffmt = 'bz2'
     else:
         ffmt = None
-
+    
     fwdOut, fwdGen = openFile(fileInfo.outR1, mode='wb', fmt=ffmt), getSeqs(fileInfo.inR1)
     revOut, revGen = None, None
 
@@ -210,7 +210,7 @@ def extractSequences(keepSequences, fileInfo):
 
         assert fxid1 == fxid2 or fxid2 is None
 
-        if fxid1 in keepSequences:
+        if fxid1 in keepSequences or (rejected and fxid1 not in rejected):  # the rejected-set allows extracting unclassified sequences if they are not in the kraken-output
             fwdOut.write(outfmt % fwdRecord)
             if revOut is not None:
                 revOut.write(outfmt % revRecord)

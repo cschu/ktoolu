@@ -51,6 +51,9 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
     assert keepTaxIDs or allowUnclassified
     nseqs = 0
     keepSequences = set()
+    # need to keep track of all dropped sequences in case we want unclassified but used the --only-classified-output switch 
+    # when running kraken (unclassified sequences are unmarked and need to be distinguished from unwanted sequences.)
+    dropSequences = set()
 
     with KTIO.openFile(f_inputClassification) as fi:
         for line in fi:
@@ -82,14 +85,19 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
 
             if takeUnclassified or takeClassified:
                 keepSequences.add(line[1].strip())
+            elif allowUnclassified:
+                # we want unclassified, but current line was classified and rejected
+                dropSequences.add(line[1].strip())
 
         if logfile is not None:
-            [logfile.write('Keeping %i of %i sequences (%.1f).\n' % (len(keepSequences), nseqs, float(len(keepSequences))/nseqs)), logfile.flush()]
+            logfile.write('Keeping %i of %i sequences (%.1f).\n' % (len(keepSequences), nseqs, float(len(keepSequences))/nseqs))
+            logfile.write('Dropping %i of %i sequences (%.1f).\n' % (len(dropSequences), nseqs, float(len(dropSequences))/nseqs))
+            logfile.flush()
 
-    return keepSequences
+    return keepSequences, dropSequences
 
 
-def extractSequences(keepSequences, fileInfo):
+def extractSequences_obsolete(keepSequences, fileInfo):
     assert fileInfo.input_format in ('fq', 'fa')
     if fileInfo.input_format == 'fq':
         getID, getSeqs, nlines = KTIO.getFastqIdentifier, KTIO.readFastq, 4
@@ -200,7 +208,7 @@ def main(argv):
 
     keepTaxIDs = compileValidTaxIDs(args.db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
     keepSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
-    KTIO.extractSequences(keepSequences, args)
+    KTIO.extractSequences(keepSequences, args, rejected=dropSequences)
     pass
 
 if __name__ == '__main__': main(sys.argv[1:])
