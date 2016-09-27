@@ -179,12 +179,15 @@ def main(argv):
     assert xor(args.gz_output, args.bz2_output) or not(args.gz_output or args.bz2_output)
 
     try:
+        # Let's see if we have one or more roots specified to extract taxonomic subtrees.
         wantedTaxIDs = map(int, args.keep_taxids.replace(' ', '').split(','))
     except:
-        # by default just take the whole tree
-        if args.includeUnclassified:
+        # If not,
+        if args.include_unclassified:
+            # and include-unclassified is True, then we assume we only want unclassified sequences.
             wantedTaxIDs = []
         else:
+            # Otherwise just take the whole tree.
             wantedTaxIDs = [1]
     try:
         unwantedTaxIDs = map(int, args.drop_taxids.replace(' ', '').split(','))

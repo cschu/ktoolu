@@ -101,66 +101,77 @@ def verifyFileFormat(fn, fileFormat):
     return verifiedFastq or verifiedFasta
 
 
+def readFasta(_in):
+    if type(_in) is str:
+        with openFile(_in) as fi:
+            return processFasta(fi)
+    else:
+        return processFasta(_in)
 
-def readFasta(fn):
+def processFasta(fi):
     """
     Provides a generator to the contents of a Fasta file.
     The function can handle single seq/multi seq, formatted/unformatted Fasta.
 
-    Input: a filename
+    Input: a file/stream handle
     Output: a generator object providing identifier and sequence information
     for each record in the Fastq file
     """
-    with openFile(fn) as fi:
-        seq, identifier = [], ''
-        for line in fi:
-            line = line.strip()
-            if not line:
-                # ignore empty lines
-                continue
-            if line.startswith('>'):
-                # new record starts with >identifier
-                if seq:
-                    # if there is data in seq, return id, seq and empty seq
-                    yield (identifier, ''.join(seq))
-                    seq = []
-                identifier = line
-            else:
-                # current line contains sequence information
-                seq.append(line)
-        if seq:
-            # return last sequence record
-            yield (identifier, ''.join(seq))
+    seq, identifier = [], ''
+    for line in fi:
+        line = line.strip()
+        if not line:
+            # ignore empty lines
+            continue
+        if line.startswith('>'):
+            # new record starts with >identifier
+            if seq:
+                # if there is data in seq, return id, seq and empty seq
+                yield (identifier, ''.join(seq))
+                seq = []
+            identifier = line
+        else:
+            # current line contains sequence information
+            seq.append(line)
+    if seq:
+        # return last sequence record
+        yield (identifier, ''.join(seq))
 
-def readFastq(fn):
+def readFastq(_in):
+    if type(_in) is str:
+        with openFile(_in) as fi:
+            return processFastq(fi)
+    else:
+        return processFastq(_in)
+
+def processFastq(fi):
     """
     Provides a generator to the contents of a Fastq file.
     The function can handle single seq/multi seq, formatted/unformatted Fastq.
 
-    Input: a filename
+    Input: a file/stream handle
     Output: a generator object providing identifier, sequence, and quality information
     for each record in the Fastq file
     """
-    with openFile(fn) as fi:
-        block, identifier = [], ''
-        for line in fi:
-            line = line.strip()
-            if not line:
-                # ignore empty lines
-                continue
-            if line.startswith('@'):
-                # new record starts with @identifier
-                identifier = line
-            elif line.startswith('+'):
-                # if seq/qual separator occurs,
-                # read equal number of lines of quality information
-                seq = ''.join(block)
-                qual = ''.join([fi.next().strip() for row in block])
-                yield (identifier, seq, qual)
-                block, head = [], ''
-            else:
-                # current line contains sequence information
-                block.append(line)
+    block, identifier = [], ''
+    for line in fi:
+        line = line.strip()
+        if not line:
+            # ignore empty lines
+            continue
+        if line.startswith('@'):
+            # new record starts with @identifier
+            identifier = line
+        elif line.startswith('+'):
+            # if seq/qual separator occurs,
+            # read equal number of lines of quality information
+            seq = ''.join(block)
+            qual = ''.join([fi.next().strip() for row in block])
+            yield (identifier, seq, qual)
+            block, head = [], ''
+        else:
+            # current line contains sequence information
+            block.append(line)
 
 
 def extractSequences(keepSequences, fileInfo):
