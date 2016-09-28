@@ -50,8 +50,9 @@ class ktTaxonomyTree(object):
                 line = line.strip().strip('|').strip()
                 if not line:
                     break
-                line = map(lambda x:x.strip(), line.split('\t|\t'))
-                line[:2] = map(int, line[:2])
+                line = list(map(lambda x:x.strip(), line.split('\t|\t')))
+                # print(line, type(line))
+                line[:2] = list(map(int, line[:2]))
                 if line[0] == 1:
                     line[1] = 0
                 try:

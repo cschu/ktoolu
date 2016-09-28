@@ -28,6 +28,12 @@ import bz2
 import gzip
 import unittest
 
+'''
+ from http://stackoverflow.com/questions/13044562/python-mechanism-to-identify-compressed-file-type-and-uncompress
+ "\x1f\x8b\x08": "gz",
+    "\x42\x5a\x68": "bz2",
+    "\x50\x4b\x03\x04": "zip"
+'''
 
 def isGZ(fn):
     """
@@ -41,7 +47,7 @@ def isGZ(fn):
     assert os.path.exists(fn)
     with open(fn, 'rb') as fi:
         b1, b2 = fi.read(1), fi.read(1)
-        return b1 == '\x1f' and b2 == '\x8b'
+        return b1 == b'\x1f' and b2 == b'\x8b'
 
 def isBZ2(fn):
     """
@@ -54,7 +60,7 @@ def isBZ2(fn):
     """
     assert os.path.exists(fn)
     with open(fn, 'rb') as fi:
-        return fi.read(10) == 'BZh91AY&SY'
+        return fi.read(10) == b'BZh91AY&SY'
 
 def openFile(fn, fmt=None, mode='rb'):
     """
@@ -74,11 +80,12 @@ def openFile(fn, fmt=None, mode='rb'):
     assert file_exists or mode in ('w', 'wb', 'a', 'ab')
     assert fmt in (None, 'gz', 'bz2')
     if fmt == 'gz' or (fmt is None and (file_exists and isGZ(fn))):
-        return gzip.open(fn, mode)
+        _file = gzip.open(fn, mode)
     elif fmt == 'bz2' or (fmt is None and (file_exists and isBZ2(fn))):
-        return bz2.BZ2File(fn, mode)
+        _file = bz2.BZ2File(fn, mode)
     else:
-        return open(fn, mode)
+        _file = open(fn, mode)
+    return _file
 
 def nRecords(fn, fmt='fq'):
     assert fmt in ('fa', 'fq')
@@ -88,7 +95,7 @@ def nRecords(fn, fmt='fq'):
 
 
 def isPreCassava18(string):
-    return string.endswith('/1') or string.endswith('/2')
+    return string.endswith(b'/1') or string.endswith(b'/2')
 def getFastqIdentifier(string):
     return string[1:-2] if isPreCassava18(string) else string.split()[0][1:]
 def getFastaIdentifier(string):
@@ -96,15 +103,14 @@ def getFastaIdentifier(string):
     return string[:-2] if isPreCassava18(string) else string
 def verifyFileFormat(fn, fileFormat):
     firstChar = openFile(fn).read(1)
-    verifiedFastq = firstChar == '@' and fileFormat == 'fq'
-    verifiedFasta = firstChar == '>' and fileFormat == 'fa'
+    verifiedFastq = firstChar == b'@' and fileFormat == 'fq'
+    verifiedFasta = firstChar == b'>' and fileFormat == 'fa'
     return verifiedFastq or verifiedFasta
 
 
 def readFasta(_in):
     if type(_in) is str:
-        with openFile(_in) as fi:
-            return processFasta(fi)
+        return processFasta(openFile(_in))
     else:
         return processFasta(_in)
 
@@ -118,29 +124,28 @@ def processFasta(fi):
     for each record in the Fastq file
     """
     seq, identifier = [], ''
-    for line in fi:
+    for line in fi:        
         line = line.strip()
         if not line:
             # ignore empty lines
             continue
-        if line.startswith('>'):
+        if line.startswith(b'>'):
             # new record starts with >identifier
             if seq:
                 # if there is data in seq, return id, seq and empty seq
-                yield (identifier, ''.join(seq))
+                yield (identifier, ''.join(seq).encode('utf-8'))
                 seq = []
             identifier = line
         else:
             # current line contains sequence information
-            seq.append(line)
+            seq.append(line.decode('utf-8'))
     if seq:
         # return last sequence record
         yield (identifier, ''.join(seq))
 
 def readFastq(_in):
     if type(_in) is str:
-        with openFile(_in) as fi:
-            return processFastq(fi)
+        return processFastq(openFile(_in))
     else:
         return processFastq(_in)
 
@@ -159,27 +164,27 @@ def processFastq(fi):
         if not line:
             # ignore empty lines
             continue
-        if line.startswith('@'):
+        if line.startswith(b'@'):
             # new record starts with @identifier
             identifier = line
-        elif line.startswith('+'):
+        elif line.startswith(b'+'):
             # if seq/qual separator occurs,
             # read equal number of lines of quality information
             seq = ''.join(block)
-            qual = ''.join([fi.next().strip() for row in block])
-            yield (identifier, seq, qual)
-            block, head = [], ''
+            qual = ''.join([next(fi).decode('utf-8').strip() for row in block])
+            yield (identifier, seq.encode('utf-8'), qual.encode('utf-8'))
+            block, identifier = [], ''
         else:
             # current line contains sequence information
-            block.append(line)
+            block.append(line.decode('utf-8'))
 
 
 def extractSequences(keepSequences, fileInfo, rejected=set()):
     assert fileInfo.input_format in ('fq', 'fa')
     if fileInfo.input_format == 'fq':
-        getID, getSeqs, nlines, outfmt = getFastqIdentifier, readFastq, 4, '%s\n%s\n+\n%s\n'
+        getID, getSeqs, nlines, outfmt = getFastqIdentifier, readFastq, 4, b'%s\n%s\n+\n%s\n'
     else:
-        getID, getSeqs, nlines, outfmt = getFastaIdentifier, readFasta, 2, '%s\n%s\n'
+        getID, getSeqs, nlines, outfmt = getFastaIdentifier, readFasta, 2, b'%s\n%s\n'
 
     if 'gz_output' in fileInfo and fileInfo.gz_output:
         ffmt = 'gz'
@@ -197,13 +202,16 @@ def extractSequences(keepSequences, fileInfo, rejected=set()):
     fxid1, fxid2 = None, None
     while 1:
         try:
-            fwdRecord = fwdGen.next()
+            # fwdRecord = fwdGen.next()
+            fwdRecord = next(fwdGen)
+            #print(fwdRecord)
         except:
             break
         fxid1 = getID(fwdRecord[0])
         if revGen is not None:
             try:
-                revRecord = revGen.next()
+                revRecord = next(revGen)
+                # revRecord = revGen.next()
             except:
                 break
             fxid2 = getID(revRecord[0])

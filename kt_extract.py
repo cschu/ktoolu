@@ -38,8 +38,10 @@ def compileValidTaxIDs(db, wantedTaxIDs=[], unwantedTaxIDs=[], vipTaxIDs=[], log
     if logfile is not None:
         [logfile.write('Traversing requested taxonomy branch(es)...\n'), logfile.flush()]
 
+    # print(wantedTaxIDs)
     for taxID in wantedTaxIDs:
         keepTaxIDs.update(taxTree.getDescendents(abs(taxID)))
+    # print(unwantedTaxIDs)
     for taxID in unwantedTaxIDs:
         keepTaxIDs.difference_update(taxTree.getDescendents(abs(taxID)))
 
@@ -59,29 +61,9 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
         for line in fi:
             nseqs += 1
             line = line.strip().split()
-
-            """
-            if taxID > 0:
-                # extract reads from branch
-                # don't allow unclassified reads
-                takeUnclassified = allowUnclassified and line[0] == 'U'
-                # only allow reads that have been assigned a taxonomy id belonging to the branch
-                takeClassified = line[0] == 'C' and int(line[2]) in keepTaxIDs
-            elif taxID < 0:
-                # ignore reads from branch
-                # do not allow unclassified reads
-                takeUnclassified = allowUnclassified and line[0] == 'U'
-                # allow only reads that have been assigned a taxonomy id outside of the branch
-                takeClassified = line[0] == 'C' and int(line[2]) not in keepTaxIDs
-            else:
-                # extract unclassified
-                # allow unclassified reads
-                takeUnclassified = allowUnclassified and line[0] == 'U'
-                # don't allow classified reads
-                takeClassified = False
-            """
-            takeClassified = line[0] == 'C' and int(line[2]) in keepTaxIDs
-            takeUnclassified = allowUnclassified and line[0] == 'U'
+            takeClassified = line[0] == b'C' and int(line[2]) in keepTaxIDs
+            takeUnclassified = allowUnclassified and line[0] == b'U'
+            # print(line, takeClassified, takeUnclassified)
 
             if takeUnclassified or takeClassified:
                 keepSequences.add(line[1].strip())
@@ -171,16 +153,14 @@ def main(argv):
     parser.add_argument('--bz2-output', action='store_true')
     args = parser.parse_args()
 
-    # for k in sorted(args):
-    #    print '%s\t%s' % (k, args[k])
-    # return None
-    # print args
-    # return None
-
     assert 'db' in args and os.path.exists(args.db)
     assert 'kraken_results' in args and os.path.exists(args.kraken_results)
-    assert args.inR1 and os.path.exists(args.inR1) and KTIO.verifyFileFormat(args.inR1, args.input_format) and args.outR1
-    assert (not args.inR2) or (os.path.exists(args.inR2) and KTIO.verifyFileFormat(args.inR2, args.input_format) and args.outR2)
+    input_exists = args.inR1 and os.path.exists(args.inR1)
+    fformat_matches = KTIO.verifyFileFormat(args.inR1, args.input_format)
+    assert input_exists and fformat_matches and args.outR1
+    input_exists = args.inR2 and os.path.exists(args.inR2)
+    fformat_matches = not input_exists or KTIO.verifyFileFormat(args.inR2, args.input_format) 
+    assert (not input_exists) or (input_exists and fformat_matches and args.outR2)
 
     def xor(a,b):
         return (a and not b) or (not a and b)
@@ -188,7 +168,7 @@ def main(argv):
 
     try:
         # Let's see if we have one or more roots specified to extract taxonomic subtrees.
-        wantedTaxIDs = map(int, args.keep_taxids.replace(' ', '').split(','))
+        wantedTaxIDs = list(map(int, args.keep_taxids.replace(' ', '').split(',')))
     except:
         # If not,
         if args.include_unclassified:
@@ -198,16 +178,16 @@ def main(argv):
             # Otherwise just take the whole tree.
             wantedTaxIDs = [1]
     try:
-        unwantedTaxIDs = map(int, args.drop_taxids.replace(' ', '').split(','))
+        unwantedTaxIDs = list(map(int, args.drop_taxids.replace(' ', '').split(',')))
     except:
         unwantedTaxIDs = []
     try:
-        vipTaxIDs = map(int, args.vip_taxids.replace(' ', '').split(','))
+        vipTaxIDs = list(map(int, args.vip_taxids.replace(' ', '').split(',')))
     except:
         vipTaxIDs = []
 
     keepTaxIDs = compileValidTaxIDs(args.db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
-    keepSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
+    keepSequences, dropSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
     KTIO.extractSequences(keepSequences, args, rejected=dropSequences)
     pass
 
