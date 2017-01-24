@@ -62,7 +62,7 @@ def isBZ2(fn):
     with open(fn, 'rb') as fi:
         return fi.read(10) == b'BZh91AY&SY'
 
-def openFile(fn, fmt=None, mode='rb'):
+def openFile(fn, fmt=None, mode='rt'):
     """
     Opens an uncompressed, gz-compressed or bz2-compressed file.
 
@@ -76,13 +76,14 @@ def openFile(fn, fmt=None, mode='rb'):
     :returns: a handle to fn
     """
     file_exists = os.path.exists(fn)
-    assert mode in ('a', 'ab', 'r', 'rb', 'w', 'wb')
-    assert file_exists or mode in ('w', 'wb', 'a', 'ab')
+    assert mode in ('a', 'r', 'w', 'rt', 'wt', 'at')
+    assert file_exists or mode in ('w', 'a', 'wt', 'at')
     assert fmt in (None, 'gz', 'bz2')
     if fmt == 'gz' or (fmt is None and (file_exists and isGZ(fn))):
         _file = gzip.open(fn, mode)
     elif fmt == 'bz2' or (fmt is None and (file_exists and isBZ2(fn))):
-        _file = bz2.BZ2File(fn, mode)
+        # _file = bz2.BZ2File(fn, mode)
+        _file = bz2.open(fn, mode=mode)
     else:
         _file = open(fn, mode)
     return _file
@@ -95,7 +96,7 @@ def nRecords(fn, fmt='fq'):
 
 
 def isPreCassava18(string):
-    return string.endswith(b'/1') or string.endswith(b'/2')
+    return string.endswith('/1') or string.endswith('/2')
 def getFastqIdentifier(string):
     return string[1:-2] if isPreCassava18(string) else string.split()[0][1:]
 def getFastaIdentifier(string):
@@ -103,8 +104,9 @@ def getFastaIdentifier(string):
     return string[:-2] if isPreCassava18(string) else string
 def verifyFileFormat(fn, fileFormat):
     firstChar = openFile(fn).read(1)
-    verifiedFastq = firstChar == b'@' and fileFormat == 'fq'
-    verifiedFasta = firstChar == b'>' and fileFormat == 'fa'
+    print("fc:", firstChar)
+    verifiedFastq = firstChar == '@' and fileFormat == 'fq'
+    verifiedFasta = firstChar == '>' and fileFormat == 'fa'
     return verifiedFastq or verifiedFasta
 
 
@@ -129,16 +131,16 @@ def processFasta(fi):
         if not line:
             # ignore empty lines
             continue
-        if line.startswith(b'>'):
+        if line.startswith('>'):
             # new record starts with >identifier
             if seq:
                 # if there is data in seq, return id, seq and empty seq
-                yield (identifier, ''.join(seq).encode('utf-8'))
+                yield (identifier, ''.join(seq))
                 seq = []
             identifier = line
         else:
             # current line contains sequence information
-            seq.append(line.decode('utf-8'))
+            seq.append(line)
     if seq:
         # return last sequence record
         yield (identifier, ''.join(seq))
@@ -164,27 +166,27 @@ def processFastq(fi):
         if not line:
             # ignore empty lines
             continue
-        if line.startswith(b'@'):
+        if line.startswith('@'):
             # new record starts with @identifier
             identifier = line
-        elif line.startswith(b'+'):
+        elif line.startswith('+'):
             # if seq/qual separator occurs,
             # read equal number of lines of quality information
             seq = ''.join(block)
-            qual = ''.join([next(fi).decode('utf-8').strip() for row in block])
-            yield (identifier, seq.encode('utf-8'), qual.encode('utf-8'))
+            qual = ''.join([next(fi).strip() for row in block])
+            yield (identifier, seq, qual)
             block, identifier = [], ''
         else:
             # current line contains sequence information
-            block.append(line.decode('utf-8'))
+            block.append(line)
 
 
 def extractSequences(keepSequences, fileInfo, rejected=set()):
     assert fileInfo.input_format in ('fq', 'fa')
     if fileInfo.input_format == 'fq':
-        getID, getSeqs, nlines, outfmt = getFastqIdentifier, readFastq, 4, b'%s\n%s\n+\n%s\n'
+        getID, getSeqs, nlines, outfmt = getFastqIdentifier, readFastq, 4, '%s\n%s\n+\n%s\n'
     else:
-        getID, getSeqs, nlines, outfmt = getFastaIdentifier, readFasta, 2, b'%s\n%s\n'
+        getID, getSeqs, nlines, outfmt = getFastaIdentifier, readFasta, 2, '%s\n%s\n'
 
     if 'gz_output' in fileInfo and fileInfo.gz_output:
         ffmt = 'gz'
@@ -193,11 +195,11 @@ def extractSequences(keepSequences, fileInfo, rejected=set()):
     else:
         ffmt = None
     
-    fwdOut, fwdGen = openFile(fileInfo.outR1, mode='wb', fmt=ffmt), getSeqs(fileInfo.inR1)
+    fwdOut, fwdGen = openFile(fileInfo.outR1, mode='wt', fmt=ffmt), getSeqs(fileInfo.inR1)
     revOut, revGen = None, None
 
     if fileInfo.outR2 and fileInfo.inR2:
-        revOut, revGen = openFile(fileInfo.outR2, mode='wb', fmt=ffmt), getSeqs(fileInfo.inR2)
+        revOut, revGen = openFile(fileInfo.outR2, mode='wt', fmt=ffmt), getSeqs(fileInfo.inR2)
 
     fxid1, fxid2 = None, None
     while 1:
