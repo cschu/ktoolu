@@ -24,10 +24,16 @@
 
 import os
 import sys
+import csv
 import argparse
 
-import ktoolu_io as KTIO
+# import ktoolu_io as KTIO
 from ktoolu_taxonomy import ktTaxonomyTree as ktree
+
+import ktio.ktio as KTIO
+# from ktoolu.ktoolu_taxonomy import ktTaxonomyTree as ktree
+
+
 
 def compileValidTaxIDs(db, wantedTaxIDs=[], unwantedTaxIDs=[], vipTaxIDs=[], logfile=None):
     keepTaxIDs = set()
@@ -47,7 +53,7 @@ def compileValidTaxIDs(db, wantedTaxIDs=[], unwantedTaxIDs=[], vipTaxIDs=[], log
 
     return keepTaxIDs.union(set(vipTaxIDs))
 
-def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=False, logfile=None):
+def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=False, logfile=None, isKraken=True):
     if logfile is not None:
         [logfile.write('Filtering sequences...\n'), logfile.flush()]
     assert keepTaxIDs or allowUnclassified
@@ -56,24 +62,60 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
     # need to keep track of all dropped sequences in case we want unclassified but used the --only-classified-output switch 
     # when running kraken (unclassified sequences are unmarked and need to be distinguished from unwanted sequences.)
     dropSequences = set()
-
+    n_unclassified_keep, n_classified_keep, n_unclassified_discard, n_classified_discard = 0, 0, 0, 0
+    
     with KTIO.openFile(f_inputClassification) as fi:
-        for line in fi:
-            nseqs += 1
-            line = line.strip().split()
-            takeClassified = line[0] == b'C' and int(line[2]) in keepTaxIDs
-            takeUnclassified = allowUnclassified and line[0] == b'U'
-            # print(line, takeClassified, takeUnclassified)
+        if isKraken:
+            for line in fi:
+                nseqs += 1
+                line = line.strip().split()
+                takeClassified = line[0] == 'C' and int(line[2]) in keepTaxIDs
+                takeUnclassified = allowUnclassified and line[0] == 'U'
+                # print(line, takeClassified, takeUnclassified)
+    
+                if takeUnclassified or takeClassified:
+                    keepSequences.add(line[1].strip())
+                elif allowUnclassified:
+                    # we want unclassified, but current line was classified and rejected
+                    # myself 2.something years later: there is probably a reason for doing it this way...
+                    dropSequences.add(line[1].strip())
+        else:
+            next(fi)
+            for nseqs, row in enumerate(csv.reader(fi, delimiter='\t'), start=1):
+                keep = False
+                isUnclassified = row[1] == 'unclassified'
+                if isUnclassified:
+                    if allowUnclassified:
+                        keep = True
+                        n_unclassified_keep += 1
+                    else:
+                        n_unclassified_discard += 1
+                else:
+                    if int(row[2]) in keepTaxIDs:
+                        keep = True
+                        n_classified_keep += 1
+                    else:
+                        n_classified_discard += 1
+                if keep:
+                    keepSequences.add(row[0])
+                elif allowUnclassified:
+                    dropSequences.add(row[0])
 
-            if takeUnclassified or takeClassified:
-                keepSequences.add(line[1].strip())
-            elif allowUnclassified:
-                # we want unclassified, but current line was classified and rejected
-                dropSequences.add(line[1].strip())
+                """
+                takeClassified = row[1] != 'unclassified' and int(row[2]) in keepTaxIDs
+                takeUnclassified = allowUnclassified and row[1] == 'unclassified'
+
+                if takeUnclassified or takeClassified:
+                    keepSequences.add(row[0])
+                elif allowUnclassified:
+                    dropSequences.add(row[0])
+                """
 
         if logfile is not None:
             logfile.write('Keeping %i of %i sequences (%.1f).\n' % (len(keepSequences), nseqs, float(len(keepSequences))/nseqs))
             logfile.write('Dropping %i of %i sequences (%.1f).\n' % (len(dropSequences), nseqs, float(len(dropSequences))/nseqs))
+   
+            logfile.write('C:keep={} ({}), C:discard={} ({}), U:keep={} ({}), U:discard={} ({})\n'.format(n_classified_keep, n_classified_keep/nseqs, n_classified_discard, n_classified_discard/nseqs, n_unclassified_keep, n_unclassified_keep/nseqs, n_unclassified_discard, n_unclassified_discard/nseqs))
             logfile.flush()
 
     return keepSequences, dropSequences
@@ -151,10 +193,11 @@ def main(argv):
 
     parser.add_argument('--gz-output', action='store_true')
     parser.add_argument('--bz2-output', action='store_true')
+    parser.add_argument('--centrifuge-mode', action='store_true')
     args = parser.parse_args()
 
-    assert 'db' in args and os.path.exists(args.db)
-    assert 'kraken_results' in args and os.path.exists(args.kraken_results)
+    assert args.db and os.path.exists(args.db)
+    assert args.kraken_results and os.path.exists(args.kraken_results)
     input_exists = args.inR1 and os.path.exists(args.inR1)
     fformat_matches = KTIO.verifyFileFormat(args.inR1, args.input_format)
     assert input_exists and fformat_matches and args.outR1
@@ -186,9 +229,11 @@ def main(argv):
     except:
         vipTaxIDs = []
 
-    keepTaxIDs = compileValidTaxIDs(args.db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs)
-    keepSequences, dropSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified)
+    logfile = sys.stdout
+    keepTaxIDs = compileValidTaxIDs(args.db, wantedTaxIDs=wantedTaxIDs, unwantedTaxIDs=unwantedTaxIDs, vipTaxIDs=vipTaxIDs, logfile=logfile)
+    keepSequences, dropSequences = filterSequences(args.db, args.kraken_results, keepTaxIDs, allowUnclassified=args.include_unclassified, isKraken=(not args.centrifuge_mode), logfile=logfile)
     KTIO.extractSequences(keepSequences, args, rejected=dropSequences)
+    print("DONE", file=logfile)
     pass
 
 if __name__ == '__main__': main(sys.argv[1:])
