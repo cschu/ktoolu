@@ -65,7 +65,6 @@
       <data format="inputR2" name="outputAR2" label="${tool.name} (class A) filtered R2-reads of ${on_string}">
         <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
       </data>
-    </outputs>
     <data format="inputR1" name="outputBR1" label="${tool.name} (class B) filtered R1-reads of ${on_string}" />
     <data format="inputR2" name="outputBR2" label="${tool.name} (class B) filtered R2-reads of ${on_string}">
       <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
@@ -78,8 +77,6 @@
     <data format="inputR2" name="outputUR2" label="${tool.name} (unclassified) filtered R2-reads of ${on_string}">
       <filter>inputFormat == "pairedFastq" or inputFormat == "pairedFasta</filter>
     </data>
-  </outputs>
-  </outputs>
   </outputs>
     <help><![CDATA[
         TODO: Fill in help.
