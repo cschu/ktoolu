@@ -75,6 +75,27 @@ class ktTaxonomyTree(object):
     pass
 
 
+def compileValidTaxIDs(db, wantedTaxIDs=[], unwantedTaxIDs=[], vipTaxIDs=[], logfile=None):
+    keepTaxIDs = set()
+
+    if logfile is not None:
+        [logfile.write('Reading taxonomy...\n'), logfile.flush()]
+    taxTree = ktTaxonomyTree(db)
+    if logfile is not None:
+        [logfile.write('Traversing requested taxonomy branch(es)...\n'), logfile.flush()]
+
+    # print(wantedTaxIDs)
+    for taxID in wantedTaxIDs:
+        keepTaxIDs.update(taxTree.getDescendents(abs(taxID)))
+    # print(unwantedTaxIDs)
+    for taxID in unwantedTaxIDs:
+        keepTaxIDs.difference_update(taxTree.getDescendents(abs(taxID)))
+
+    return keepTaxIDs.union(set(vipTaxIDs))
+
+
+
+
 __author__ = "Christian Schudoma"
 __copyright__ = "Copyright 2014-2016, Christian Schudoma, The Sainsbury Laboratory"
 __credits__ = ["Pirasteh Pahlavan", "Agathe Jouet", "Yogesh Gupta"]
