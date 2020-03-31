@@ -84,7 +84,7 @@ def filterSequences(db, f_inputClassification, keepTaxIDs, allowUnclassified=Fal
             for nseqs, row in enumerate(csv.reader(fi, delimiter='\t'), start=1):
                 keep = False
                 isUnclassified = row[1] == 'unclassified'
-                if isUnclassified:
+                if isUnclassified or not row[2].isdigit():
                     if allowUnclassified:
                         keep = True
                         n_unclassified_keep += 1
